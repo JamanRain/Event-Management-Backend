@@ -17,8 +17,7 @@ public class JwtUtil {
     private static final String SECRET =
             "campus-event-management-secret-key-256";
 
-    private static final long EXPIRATION =
-            24 * 60 * 60 * 1000; // 1 day
+    private static final long EXPIRATION = 15 * 60 * 1000; // 15 minutes
 
     private final SecretKey key =
             Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));

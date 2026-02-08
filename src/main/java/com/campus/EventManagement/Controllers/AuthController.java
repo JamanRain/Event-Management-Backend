@@ -1,11 +1,14 @@
 package com.campus.EventManagement.Controllers;
 
+import com.campus.EventManagement.Entities.User;
 import com.campus.EventManagement.Security.CustomUserDetails;
-import com.campus.EventManagement.Security.SecurityConfig;
-
 import com.campus.EventManagement.Security.JwtUtil;
+import com.campus.EventManagement.Security.SecurityUtil;
 import com.campus.EventManagement.Services.PasswordResetService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.campus.EventManagement.Services.RefreshTokenService;
+import com.campus.EventManagement.Repositories.UserRepository;
+import com.campus.EventManagement.Entities.RefreshToken;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,14 +24,21 @@ public class AuthController {
     private final AuthenticationManager authManager;
     private final JwtUtil jwtUtil;
     private final PasswordResetService passwordResetService;
+    private final RefreshTokenService refreshTokenService;
+
+    private final UserRepository userRepository;
 
     public AuthController(AuthenticationManager authManager,
-                          JwtUtil jwtUtil, PasswordResetService passwordResetService) {
+                          JwtUtil jwtUtil,
+                          PasswordResetService passwordResetService,
+                          RefreshTokenService refreshTokenService,
+                          UserRepository userRepository) {
         this.authManager = authManager;
         this.jwtUtil = jwtUtil;
         this.passwordResetService = passwordResetService;
+        this.refreshTokenService = refreshTokenService;
+        this.userRepository = userRepository;
     }
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> req) {
 
@@ -37,21 +47,50 @@ public class AuthController {
                         req.get("email"), req.get("password"))
         );
 
-        CustomUserDetails user =
-                (CustomUserDetails) auth.getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+        String accessToken = jwtUtil.generateToken(userDetails);
+
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow();
+
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
         return ResponseEntity.ok(Map.of(
-                "token", jwtUtil.generateToken(user),
-                "role", user.getAuthorities().iterator().next().getAuthority()
+                "accessToken", accessToken,
+                "refreshToken", refreshToken.getToken(),
+                "role", userDetails.getAuthorities().iterator().next().getAuthority()
         ));
     }
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> req) {
 
+        String requestToken = req.get("refreshToken");
 
+        RefreshToken refreshToken = refreshTokenService.findByToken(requestToken);
+
+        refreshTokenService.verifyExpiration(refreshToken);
+
+        User user = refreshToken.getUser();
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+
+        String newAccessToken = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(Map.of(
+                "accessToken", newAccessToken
+        ));
+    }
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // JWT is stateless – client deletes token
-        return ResponseEntity.ok("Logout successful");
+
+        Long userId = SecurityUtil.getCurrentUserId();
+        User user = userRepository.findById(userId).orElseThrow();
+
+        refreshTokenService.deleteByUser(user);
+
+        return ResponseEntity.ok("Logged out successfully");
     }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> req) {
         passwordResetService.createResetToken(req.get("email"));
@@ -66,5 +105,4 @@ public class AuthController {
         );
         return ResponseEntity.ok("Password updated successfully");
     }
-
 }
