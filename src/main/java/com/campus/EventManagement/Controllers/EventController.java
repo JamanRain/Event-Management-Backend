@@ -36,9 +36,9 @@ public class EventController {
     @PreAuthorize("hasRole('CLUB')")
     public ResponseEntity<?> updateEvent(
             @PathVariable Long eventId,
-            @RequestBody Event event) {
+            @RequestBody Event event, Pageable pageable) {
 
-        return eventService.updateEvent(event, eventId)
+        return eventService.updateEvent(event, eventId, pageable)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
@@ -51,9 +51,9 @@ public class EventController {
 
     @DeleteMapping("/delete/{eventId}")
     @PreAuthorize("hasAnyRole('ADMIN','CLUB')")
-    public ResponseEntity<?> deleteEvent(@PathVariable Long eventId) {
+    public ResponseEntity<?> deleteEvent(@PathVariable Long eventId, Pageable pageable) {
 
-        return eventService.deleteEvent(eventId)
+        return eventService.deleteEvent(eventId, pageable)
                 .map(r -> ResponseEntity.ok().build())
                 .orElse(ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }

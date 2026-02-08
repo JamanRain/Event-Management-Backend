@@ -31,6 +31,8 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public Optional<User> createUser(User user) {
@@ -41,6 +43,20 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+       try
+       {
+           emailService.sendSimpleMail(
+                   user.getEmail(),
+                   "Welcome to Event Management System 🎉",
+                   "Hi " + user.getName() + ",\n\nYour account has been created successfully.\n\nHappy exploring events!\n\n— EMS Team"
+           );
+       }
+       catch (Exception e)
+       {
+           throw new BadRequestException("Failed to create User");
+       }
+
+
         return Optional.of(userRepository.save(user));
     }
 

@@ -4,6 +4,8 @@ import com.campus.EventManagement.Security.CustomUserDetails;
 import com.campus.EventManagement.Security.SecurityConfig;
 
 import com.campus.EventManagement.Security.JwtUtil;
+import com.campus.EventManagement.Services.PasswordResetService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,11 +20,13 @@ public class AuthController {
 
     private final AuthenticationManager authManager;
     private final JwtUtil jwtUtil;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(AuthenticationManager authManager,
-                          JwtUtil jwtUtil) {
+                          JwtUtil jwtUtil, PasswordResetService passwordResetService) {
         this.authManager = authManager;
         this.jwtUtil = jwtUtil;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/login")
@@ -48,4 +52,19 @@ public class AuthController {
         // JWT is stateless – client deletes token
         return ResponseEntity.ok("Logout successful");
     }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> req) {
+        passwordResetService.createResetToken(req.get("email"));
+        return ResponseEntity.ok("Password reset link sent to email");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> req) {
+        passwordResetService.resetPassword(
+                req.get("token"),
+                req.get("newPassword")
+        );
+        return ResponseEntity.ok("Password updated successfully");
+    }
+
 }

@@ -33,6 +33,8 @@ public class RegistrationService {
 
     @Autowired
     private EventRepository eventRepository;
+    @Autowired
+    private EmailService emailService;
 
     @Transactional
     public Optional<Registration> registerForEvent(Long eventId) {
@@ -59,6 +61,20 @@ public class RegistrationService {
 
         event.setRegistered(event.getRegistered() + 1);
         eventRepository.save(event);
+        try
+        {
+            emailService.sendSimpleMail(
+                    user.getEmail(),
+                    "Event Registration Confirmed ✅",
+                    "Hi " + user.getName() + ",\n\nYou have successfully registered for the event:\n"
+                            + event.getTitle() + "\n\nDate: " + event.getEventDate() + "\n\nSee you there!\n\n— EMS Team"
+            );
+        }
+        catch (Exception e)
+        {
+            throw new BadRequestException("Email failed to send");
+        }
+
 
         return Optional.of(registrationRepository.save(reg));
     }
