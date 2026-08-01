@@ -18,4 +18,12 @@ public interface EventRepository extends JpaRepository<Event, Integer> {
     Page<Event> findByCreatedById(Long userId, Pageable pageable);
 
     Page<Event> findAllByApprovedTrue(Pageable pageable);
+
+    long count();
+
+    long countByApproved(boolean approved);
+
+    Page<Event> findByApprovedFalse(
+            Pageable pageable
+    );
 }

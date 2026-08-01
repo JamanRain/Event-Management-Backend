@@ -68,6 +68,13 @@ public class UserController {
     public ResponseEntity<?> getUsersByRole(Pageable pageable) {
         return ResponseEntity.ok(userService.getUsersByRole(pageable));
     }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUser(@PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                userService.getUser(id)
+        );
+    }
 
 }
 

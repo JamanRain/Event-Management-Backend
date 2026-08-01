@@ -42,6 +42,43 @@ public class RegistrationController {
     public ResponseEntity<?> getMyRegisteredEvents(Pageable pageable) {
         return ResponseEntity.ok(registrationService.getMyRegisteredEvents(pageable));
     }
+    @GetMapping("/event/{eventId}")
+    @PreAuthorize("hasRole('CLUB')")
+    public ResponseEntity<?> getEventRegistrations(
+            @PathVariable Long eventId,
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+                registrationService
+                        .getEventRegistrations(
+                                eventId,
+                                pageable
+                        )
+        );
+    }@PutMapping("/approve/{registrationId}")
+    @PreAuthorize("hasRole('CLUB')")
+    public ResponseEntity<?> approveRegistration(
+            @PathVariable Long registrationId) {
+
+        return ResponseEntity.ok(
+                registrationService
+                        .approveRegistration(
+                                registrationId
+                        )
+        );
+    }
+    @PutMapping("/reject/{registrationId}")
+    @PreAuthorize("hasRole('CLUB')")
+    public ResponseEntity<?> rejectRegistration(
+            @PathVariable Long registrationId) {
+
+        return ResponseEntity.ok(
+                registrationService
+                        .rejectRegistration(
+                                registrationId
+                        )
+        );
+    }
 
 }
 

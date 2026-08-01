@@ -67,5 +67,30 @@ public class EventController {
     public ResponseEntity<?> getMyClubEvents(Pageable pageable) {
         return ResponseEntity.ok(eventService.getMyClubEvents(pageable));
     }
+    @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getPendingEvents(
+            Pageable pageable
+    ) {
+
+        return ResponseEntity.ok(
+                eventService.getPendingEvents(
+                        pageable
+                )
+        );
+    }
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getEvent(@PathVariable Long id) {
+        return ResponseEntity.ok(eventService.getEvent(id));
+    }
+    @PutMapping("/revoke/{eventId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> revokeApproval(
+            @PathVariable Long eventId) {
+
+        return ResponseEntity.ok(
+                eventService.revokeApproval(eventId)
+        );
+    }
 
 }

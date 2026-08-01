@@ -4,47 +4,116 @@ import com.campus.EventManagement.Entities.RefreshToken;
 import com.campus.EventManagement.Entities.User;
 import com.campus.EventManagement.Repositories.RefreshTokenRepository;
 import com.campus.EventManagement.Repositories.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class RefreshTokenService {
 
     private final RefreshTokenRepository repo;
-    private final UserRepository userRepo;
+    private final UserRepository userRepository;
 
-    public RefreshTokenService(RefreshTokenRepository repo, UserRepository userRepo) {
+    public RefreshTokenService(
+            RefreshTokenRepository repo,
+            UserRepository userRepository) {
+
         this.repo = repo;
-        this.userRepo = userRepo;
+        this.userRepository = userRepository;
     }
 
-    public RefreshToken createRefreshToken(User user) {
+    /**
+     * Creates a new refresh token.
+     * Deletes any existing token for that user first.
+     */
+    public RefreshToken createRefreshToken(Long userId) {
 
-        repo.deleteByUser(user);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found"
+                        ));
 
-        RefreshToken token = new RefreshToken();
-        token.setUser(user);
-        token.setToken(UUID.randomUUID().toString());
-        token.setExpiryDate(LocalDateTime.now().plusDays(7));
+        // One user -> One refresh token
+        repo.findByUser(user)
+                .ifPresent(repo::delete);
 
-        return repo.save(token);
+        RefreshToken refreshToken = new RefreshToken();
+
+        refreshToken.setUser(user);
+
+        refreshToken.setToken(
+                UUID.randomUUID().toString()
+        );
+
+        refreshToken.setExpiryDate(
+                LocalDateTime.now().plusDays(7)
+        );
+
+        return repo.save(refreshToken);
     }
 
-    public RefreshToken verifyExpiration(RefreshToken token) {
-        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            repo.delete(token);
-            throw new RuntimeException("Refresh token expired. Please login again.");
-        }
-        return token;
-    }
+    /**
+     * Find refresh token.
+     */
     public RefreshToken findByToken(String token) {
+
         return repo.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Refresh token not found"
+                        ));
     }
-    public void deleteByUser(User user) {
-        repo.deleteByUser(user);
+
+    /**
+     * Validate expiration.
+     */
+    public RefreshToken verifyExpiration(
+            RefreshToken refreshToken) {
+
+        if (refreshToken.getExpiryDate()
+                .isBefore(LocalDateTime.now())) {
+
+            repo.delete(refreshToken);
+
+            throw new RuntimeException(
+                    "Refresh token expired. Please login again."
+            );
+        }
+
+        return refreshToken;
+    }
+
+    /**
+     * Delete refresh token for a user.
+     */
+    public void deleteByUser(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "User not found"
+                        ));
+
+        repo.findByUser(user)
+                .ifPresent(repo::delete);
+    }
+
+    /**
+     * Optional utility:
+     * Delete all expired tokens.
+     * Can be scheduled with @Scheduled.
+     */
+    public void deleteExpiredTokens() {
+
+        repo.findAll()
+                .stream()
+                .filter(token ->
+                        token.getExpiryDate()
+                                .isBefore(LocalDateTime.now()))
+                .forEach(repo::delete);
     }
 }
-

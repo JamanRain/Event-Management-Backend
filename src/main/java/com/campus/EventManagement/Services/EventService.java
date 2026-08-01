@@ -181,5 +181,70 @@ public class EventService {
         }
         return eventRepository.findByCreatedById(clubId, pageable);
     }
+    public Page<Event> getPendingEvents(
+            Pageable pageable
+    ) {
+
+        String role =
+                SecurityUtil.getCurrentRole();
+
+        if (!role.contains("ADMIN")) {
+
+            throw new UnauthorizedException(
+                    "Only ADMIN can view pending events"
+            );
+        }
+
+        return eventRepository
+                .findByApprovedFalse(
+                        pageable
+                );
+    }
+    public Event getEvent(Long id) {
+
+        return eventRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Event not found"));
+    }
+    public Event getEventById(Long id) {
+        return eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+    }
+    @Transactional
+    public Event revokeApproval(Long eventId) {
+
+        String role = SecurityUtil.getCurrentRole();
+
+        if (!role.contains("ADMIN")) {
+            throw new UnauthorizedException(
+                    "Only ADMIN can revoke approval"
+            );
+        }
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Event not found"
+                        ));
+
+        event.setApproved(false);
+
+        Event saved = eventRepository.save(event);
+
+        try {
+
+            emailService.sendSimpleMail(
+                    saved.getCreatedBy().getEmail(),
+                    "Event Approval Revoked",
+                    "Your event \""
+                            + saved.getTitle()
+                            + "\" has been moved back to Pending by the administrator."
+            );
+
+        } catch (Exception ignored) {
+        }
+
+        return saved;
+    }
 }
 
